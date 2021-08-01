@@ -1,0 +1,17 @@
+[package]
+name = "re_tester"
+version = "0.1.0"
+edition = "2018"
+
+[profile.release]
+debug = false
+lto = true
+codegen-units=1
+opt-level = 3
+panic = 'abort'  # does cleanup upon panics
+trustflags = ["-C", "target-cpu=native"]
+
+[dependencies]
+druid = { git = "https://github.com/linebender/druid", rev = "06b37f4" }
+regex = "1.5.4"
+log = "0.4.14"
