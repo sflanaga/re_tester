@@ -15,3 +15,6 @@ trustflags = ["-C", "target-cpu=native"]
 druid = { git = "https://github.com/linebender/druid", rev = "06b37f4" }
 regex = "1.5.4"
 log = "0.4.14"
+cpu-time = "1.0.0"
+[build-dependencies]
+embed-resource = "1.6"

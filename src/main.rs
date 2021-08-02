@@ -1,3 +1,4 @@
+#![windows_subsystem = "windows"]
 // Copyright 2021 The Druid Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,11 +18,9 @@
 //! I would like to make this a bit fancier (like the flex demo) but for now
 //! lets keep it simple.
 
-use std::borrow::BorrowMut;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::time::Duration;
 
-use druid::piet::dwrite::FontCollection;
-use druid::piet::DwriteFactory;
 use druid::widget::{
     Button, CrossAxisAlignment, Flex, FlexParams, Label, MainAxisAlignment, SizedBox, Slider,
     Split, TextBox,
@@ -40,6 +39,7 @@ struct AppState {
     pattern: String,
     string: String,
     results: String,
+    cpu_time: Duration,
 }
 
 impl AppState {
@@ -143,6 +143,7 @@ pub fn main() {
     // start the application
     AppLauncher::with_window(main_window)
         // .log_to_console()
+        
         .launch(initial_state)
         .expect("Failed to launch application");
 }
@@ -158,7 +159,7 @@ fn build_root_widget() -> impl Widget<AppState> {
     */
     //FontFamily::MONOSPACE
 
-    let mono_font = FontDescriptor::new(FontFamily::MONOSPACE).with_size(14.0);
+    let mono_font = FontDescriptor::new(FontFamily::MONOSPACE).with_size(12.0);
 
     let re_tb = TextBox::new()
         .with_placeholder("Enter regular expression here")
@@ -166,8 +167,8 @@ fn build_root_widget() -> impl Widget<AppState> {
         .with_text_alignment(TextAlignment::Start)
         .expand_width()
         .lens(AppState::pattern);
-
-    let lb1 = Label::new("Pattern").expand_width();
+    
+    let lb1 = Label::new("Pattern:").expand_width();
 
     let string_tb = TextBox::new()
         .with_placeholder("Enter text to test regular expression against here")
@@ -176,19 +177,17 @@ fn build_root_widget() -> impl Widget<AppState> {
         .expand_width()
         .lens(AppState::string);
 
-    let lb2 = Label::new("String").expand_width();
-
-    let mut mc = Flex::column();
+    let lb2 = Label::new("String:").expand_width();
 
     let mut row1 = Flex::row() //cross_axis_alignment(CrossAxisAlignment::Start)
-        .with_default_spacer()
+        // .with_default_spacer()
         .with_flex_child(lb1,1.0)
         .with_default_spacer()
         .with_flex_child(re_tb,16.0)
         ;
 
     let mut row2 = Flex::row() //cross_axis_alignment(CrossAxisAlignment::Start)
-        .with_default_spacer()
+        // .with_default_spacer()
         .with_flex_child(lb2, 1.0)
         .with_default_spacer()
         .with_flex_child(string_tb, 16.0);
@@ -199,8 +198,8 @@ fn build_root_widget() -> impl Widget<AppState> {
                 .on_click(|ctx, data: &mut AppState, e: &Env| {
                     data.matches();
                 })
-                .expand_width(), //.lens(AppState::re)
-            1.0,
+                .expand_width()
+                ,1.0,
         )
         .with_default_spacer()
         .with_flex_child(
@@ -208,8 +207,8 @@ fn build_root_widget() -> impl Widget<AppState> {
                 .on_click(|ctx, data: &mut AppState, e: &Env| {
                     data.find();
                 })
-                .expand_width(),
-            1.0,
+                .expand_width()
+                ,1.0,
         )
         .with_default_spacer()
         .with_flex_child(
@@ -217,8 +216,8 @@ fn build_root_widget() -> impl Widget<AppState> {
                 .on_click(|ctx, data: &mut AppState, e: &Env| {
                     data.split();
                 })
-                .expand_width(),
-            1.0,
+                .expand_width()
+                ,1.0,
         );
 
     use druid::widget::DisabledIf;
@@ -227,19 +226,27 @@ fn build_root_widget() -> impl Widget<AppState> {
         .with_placeholder("Results go here")
         .with_text_alignment(TextAlignment::Start)
         .with_font(mono_font.clone())
-        .expand()
+        .expand()        
         .lens(AppState::results);
 
+    let mut mc = Flex::column();
+    //mc.set_main_axis_alignment(MainAxisAlignment::SpaceBetween);
     mc.add_flex_child(row1, 1.0);
     mc.add_default_spacer();
     mc.add_flex_child(row2, 1.0);
     mc.add_default_spacer();
     mc.add_flex_child(row3, 1.0);
-    mc.add_default_spacer();
-    mc.add_flex_child(results_tb.disabled_if(|_, _| false), 10.0);
-    mc.add_default_spacer();
+    // mc.add_default_spacer();
+    mc.add_flex_child(results_tb, 12.0);
+    // let clb = Label::new(|d: &AppState, _: &Env| format!("{:?}", cpu_time::ProcessTime::now()));
+    // mc.add_flex_child(clb
+    //     , 1.0);
+    //mc.add_default_spacer();
+    //let it = mc.expand();
 
-    mc //.debug_paint_layout()
+    // mc.expand();
+
+    mc//.debug_paint_layout()
 }
 
 #[allow(unused_assignments, unused_mut)]
