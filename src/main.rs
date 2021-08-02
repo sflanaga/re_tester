@@ -39,7 +39,6 @@ struct AppState {
     pattern: String,
     string: String,
     results: String,
-    cpu_time: Duration,
 }
 
 impl AppState {
@@ -131,7 +130,7 @@ pub fn main() {
     let main_window = WindowDesc::new(build_root_widget())
         .title(WINDOW_TITLE)
         //.menu(make_menu)
-        .window_size((800.0, 600.0));
+        .window_size((800.0, 400.0));
 
     // create the initial app state
     let initial_state = AppState {
@@ -226,7 +225,8 @@ fn build_root_widget() -> impl Widget<AppState> {
         .with_placeholder("Results go here")
         .with_text_alignment(TextAlignment::Start)
         .with_font(mono_font.clone())
-        .expand()        
+        .expand()   
+
         .lens(AppState::results);
 
     let mut mc = Flex::column();
@@ -237,7 +237,8 @@ fn build_root_widget() -> impl Widget<AppState> {
     mc.add_default_spacer();
     mc.add_flex_child(row3, 1.0);
     // mc.add_default_spacer();
-    mc.add_flex_child(results_tb, 12.0);
+    mc.add_flex_child(results_tb, 8.0);
+
     // let clb = Label::new(|d: &AppState, _: &Env| format!("{:?}", cpu_time::ProcessTime::now()));
     // mc.add_flex_child(clb
     //     , 1.0);
