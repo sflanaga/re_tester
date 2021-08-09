@@ -24,6 +24,8 @@ fltk-theme = "0.1.8"
 regex = "1.5.4"
 log = "0.4.14"
 cpu-time = "1.0.0"
+chrono = "0.4.19"
+
 [build-dependencies]
 embed-resource = "1.6"
 

@@ -1,127 +1,193 @@
+#![windows_subsystem = "windows"]
+
+use std::{cell::RefCell, fmt::Display, rc::Rc, time::SystemTime};
+
+use chrono::{DateTime, Local, Utc};
 use fltk::{
     app,
     button::Button,
-    enums::{Align, Color, Event, Font, Shortcut},
+    enums::{Align, Color, Font, },
     frame::Frame,
-    group::{Group, Pack, PackType},
+    group::{Pack, PackType},
     input::Input,
-    output::{MultilineOutput, Output},
-    prelude::{ButtonExt, GroupExt, InputExt, WidgetBase, WidgetExt, WindowExt},
+    output::{MultilineOutput},
+    prelude::{GroupExt, InputExt, WidgetExt, WindowExt},
     window::Window,
 };
-use fltk_theme::{color_themes, ColorTheme, ThemeType, WidgetTheme};
+use fltk_theme::{ThemeType, WidgetTheme};
 use regex::Regex;
 
-pub fn matches(pat_in: &Input, str_in: &Input, out: &mut MultilineOutput) {
-    out.set_value("");
-    let mut results = String::with_capacity(128);
-    out.set_text_color(Color::Black);
-    match Regex::new(&pat_in.value()) {
-        Err(e) => {
-            out.set_text_color(Color::Red);
-            results.push_str(&format!("Error with pattern: {}", e))
+
+#[derive(Debug, Clone)]
+struct Execution {
+    time: chrono::DateTime<Local>,
+    operation: String,
+    pattern: String,
+    string: String,
+}
+
+impl Execution {
+    pub fn new(o: &str, p: &str, s: &str) -> Self {
+        Execution {
+            time: chrono::Local::now(),
+            operation: o.into(),
+            pattern: p.into(),
+            string: s.into(),
         }
-        Ok(res) => {
-            if res.is_match(&str_in.value()) {
-                results.push_str(&format!(
-                    "Matching: \"{}\"\nAgainst: \"{}\"\n\n",
-                    &pat_in.value(),
-                    &str_in.value()
-                ));
-                let s = str_in.value().clone();
-                let caps = res.captures(&s);
-                if let Some(caps) = caps {
-                    for (i, c) in caps.iter().enumerate() {
-                        if let Some(cc) = c {
-                            results.push_str(&format!("group[{}] = \"{}\"\n", i, cc.as_str()));
-                        } else {
-                            results.push_str(&format!("group[{}] = None\n", i));
+    }
+}
+
+impl Display for Execution {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} Op: \"{}\" RE: \"{}\" str: \"{}\"", self.time.to_rfc3339(), self.operation, self.pattern, self.string)
+    }
+}
+
+#[derive(Debug, Clone)]
+struct ReTest {
+    out: MultilineOutput,
+    inp: Input,
+    pat: Input,
+    hist: Rc<RefCell<Vec<Execution>>>,
+}
+
+impl ReTest {
+    pub fn new(out: &MultilineOutput, inp: &Input, pat: &Input) -> Self {
+        let r = ReTest {
+            out: out.clone(),
+            inp: inp.clone(),
+            pat: pat.clone(),
+            hist: Rc::new(RefCell::new(Vec::new())),
+        };
+        r
+    }
+    pub fn history(&mut self) {
+        let mut s = String::with_capacity(1024);
+        if self.hist.borrow().len() <= 0 {
+            s.push_str("No history as yet");
+        } else {
+            for (i,x) in self.hist.borrow().iter().enumerate().rev() {
+                s.push_str(&format!("{}: {}\n", i, x));
+            }
+        }
+        self.out.set_value(&s);
+    }
+
+    pub fn matches(&mut self) {
+        self.out.set_value("");
+        let mut results = String::with_capacity(128);
+        self.out.set_text_color(Color::Black);
+        match Regex::new(&self.pat.value()) {
+            Err(e) => {
+                self.out.set_text_color(Color::Red);
+                results.push_str(&format!("Error with pattern: {}", e))
+            }
+            Ok(res) => {
+                if res.is_match(&self.inp.value()) {
+                    results.push_str(&format!(
+                        "Matching: \"{}\"\nAgainst: \"{}\"\n\n",
+                        &self.pat.value(),
+                        &self.inp.value()
+                    ));
+                    let s = self.inp.value().clone();
+                    let caps = res.captures(&s);
+                    if let Some(caps) = caps {
+                        for (i, c) in caps.iter().enumerate() {
+                            if let Some(cc) = c {
+                                results.push_str(&format!("group[{}] = \"{}\"\n", i, cc.as_str()));
+                            } else {
+                                results.push_str(&format!("group[{}] = None\n", i));
+                            }
                         }
+                    } else {
+                        results.push_str("There are no group captures");
                     }
                 } else {
-                    results.push_str("There are no group captures");
+                    self.out.set_text_color(Color::Red);
+    
+                    results.push_str(&format!(
+                        "String:\n\"{}\"\nDoes not match Pattern:\n\"{}\"",
+                        &self.inp.value(),
+                        &self.pat.value()
+                    ));
                 }
-            } else {
-                out.set_text_color(Color::Red);
-
+            }
+        }
+        self.out.set_value(&results);
+        self.hist.borrow_mut().push(Execution::new("matches", &self.pat.value(), &self.inp.value(), ))
+    }
+    
+    pub fn find(&mut self) {
+        self.out.set_value("");
+        self.out.set_text_color(Color::Black);
+    
+        let mut results = String::with_capacity(128);
+        let pattern = self.pat.value().clone();
+        let string = self.inp.value().clone();
+        match Regex::new(&pattern) {
+            Err(e) => {
+                self.out.set_text_color(Color::Red);
+                results.push_str(&format!("Error with pattern: {}", e))
+            }
+            Ok(res) => {
                 results.push_str(&format!(
-                    "String:\n\"{}\"\nDoes not match Pattern:\n\"{}\"",
-                    &str_in.value(),
-                    &pat_in.value()
+                    "Find pattern:\n\"{}\"\nIn:\n\"{}\"\n\n",
+                    pattern, string
                 ));
+                let mut finds = 0;
+                for (i, m) in res.find_iter(&string).enumerate() {
+                    finds += 1;
+    
+                    results.push_str(&format!(
+                        "Iteration {} found \"{}\" at ({:?})\n",
+                        i,
+                        m.as_str(),
+                        m.range()
+                    ));
+                }
+                if finds <= 0 {
+                    self.out.set_text_color(Color::Red);
+                    results.push_str("Found nothing");
+                }
             }
         }
+        self.out.set_value(&results);
+        self.hist.borrow_mut().push(Execution::new("find", &self.pat.value(), &self.inp.value(), ))
     }
-    out.set_value(&results);
-}
-
-pub fn find(pat_in: &Input, str_in: &Input, out: &mut MultilineOutput) {
-    out.set_value("");
-    out.set_text_color(Color::Black);
-
-    let mut results = String::with_capacity(128);
-    let pattern = pat_in.value().clone();
-    let string = str_in.value().clone();
-    match Regex::new(&pattern) {
-        Err(e) => {
-            out.set_text_color(Color::Red);
-            results.push_str(&format!("Error with pattern: {}", e))
-        }
-        Ok(res) => {
-            results.push_str(&format!(
-                "Find pattern:\n\"{}\"\nIn:\n\"{}\"\n\n",
-                pattern, string
-            ));
-            let mut finds = 0;
-            for (i, m) in res.find_iter(&string).enumerate() {
-                finds += 1;
-
+    
+    pub fn split(&mut self) {
+        self.out.set_value("");
+        self.out.set_text_color(Color::Black);
+        let mut results = String::with_capacity(128);
+        let pattern = self.pat.value().clone();
+        let string = self.inp.value().clone();
+        match Regex::new(&pattern) {
+            Err(e) => {
+                self.out.set_text_color(Color::Red);
+                results.push_str(&format!("Error with pattern: {}", e))
+            }
+            Ok(res) => {
                 results.push_str(&format!(
-                    "Iteration {} found \"{}\" at ({:?})\n",
-                    i,
-                    m.as_str(),
-                    m.range()
+                    "Splitting with pattern:\n\"{}\"\nString:\n\"{}\"\n\n",
+                    pattern, string
                 ));
-            }
-            if finds <= 0 {
-                out.set_text_color(Color::Red);
-                results.push_str("Found nothing");
+                let mut finds = 0;
+                for (i, m) in res.split(&string).enumerate() {
+                    finds += 1;
+    
+                    results.push_str(&format!("Index {} is \"{}\"\n", i, m));
+                }
+                if finds <= 0 {
+                    self.out.set_text_color(Color::Red);
+                    results.push_str("Found nothing");
+                }
             }
         }
+        self.out.set_value(&results);
+        self.hist.borrow_mut().push(Execution::new("split", &self.pat.value(), &self.inp.value(), ))
     }
-    out.set_value(&results);
 }
 
-pub fn split(pat_in: &Input, str_in: &Input, out: &mut MultilineOutput) {
-    out.set_value("");
-    out.set_text_color(Color::Black);
-    let mut results = String::with_capacity(128);
-    let pattern = pat_in.value().clone();
-    let string = str_in.value().clone();
-    match Regex::new(&pattern) {
-        Err(e) => {
-            out.set_text_color(Color::Red);
-            results.push_str(&format!("Error with pattern: {}", e))
-        }
-        Ok(res) => {
-            results.push_str(&format!(
-                "Splitting with pattern:\n\"{}\"\nString:\n\"{}\"\n\n",
-                pattern, string
-            ));
-            let mut finds = 0;
-            for (i, m) in res.split(&string).enumerate() {
-                finds += 1;
-
-                results.push_str(&format!("Index {} is \"{}\"\n", i, m));
-            }
-            if finds <= 0 {
-                out.set_text_color(Color::Red);
-                results.push_str("Found nothing");
-            }
-        }
-    }
-    out.set_value(&results);
-}
 
 fn main() {
     let app = app::App::default();
@@ -187,6 +253,7 @@ fn main() {
 
     let mut find_but = Button::default().with_size(60, 25).with_label("&Find");
     let mut split_but = Button::default().with_size(60, 25).with_label("&Split");
+    let mut hist_but = Button::default().with_size(60, 25).with_label("&History");
 
     button_pack.end();
     button_pack.set_type(PackType::Horizontal);
@@ -209,13 +276,17 @@ fn main() {
     wind.end();
     wind.show();
 
-    let (patc, strc, mut opc) = (pat.clone(), str.clone(), op.clone());
-    matches_but.set_callback(move |b| matches(&patc, &strc, &mut opc));
-    let (patc, strc, mut opc) = (pat.clone(), str.clone(), op.clone());
-    find_but.set_callback(move |b| find(&patc, &strc, &mut opc));
-    let (patc, strc, mut opc) = (pat.clone(), str.clone(), op.clone());
-    split_but.set_callback(move |b| split(&patc, &strc, &mut opc));
+    let r_ =  ReTest::new(&op, &str,&pat);
+
+    let mut r =  r_.clone();
+    matches_but.set_callback(move |b| r.matches());
+    let mut r= r_.clone();
+    find_but.set_callback(move |b| r.find());
+    let mut r = r_.clone();
+    split_but.set_callback(move |b| r.split());
+    let mut r = r_.clone();
+    hist_but.set_callback(move |b| r.history());
+
 
     app.run().unwrap();
-    /* Event handling */
 }
