@@ -3,6 +3,7 @@ name = "re_tester"
 version = "0.1.0"
 edition = "2018"
 
+
 [profile.release]
 debug = false
 lto = true
@@ -11,10 +12,18 @@ opt-level = 3
 panic = 'abort'  # does cleanup upon panics
 trustflags = ["-C", "target-cpu=native"]
 
+[[bin]]
+path="src/fltk_re_tester.rs"
+name="re_test"
+package="re_test"
+
 [dependencies]
 druid = { git = "https://github.com/linebender/druid", rev = "06b37f4" }
+fltk = {version = "1.1.7", features = ["fltk-bundled"] }
+fltk-theme = "0.1.8"
 regex = "1.5.4"
 log = "0.4.14"
 cpu-time = "1.0.0"
 [build-dependencies]
 embed-resource = "1.6"
+
