@@ -3,20 +3,9 @@
 use std::{cell::RefCell, fmt::Display, rc::Rc, time::SystemTime};
 
 use chrono::{DateTime, Local, Utc};
-use fltk::{
-    app,
-    button::Button,
-    enums::{Align, Color, Font, },
-    frame::Frame,
-    group::{Pack, PackType},
-    input::Input,
-    output::{MultilineOutput},
-    prelude::{GroupExt, InputExt, WidgetExt, WindowExt},
-    window::Window,
-};
+use fltk::{app, button::Button, enums::{Align, Color, Font, }, frame::Frame, group::{Pack, PackType}, image::PngImage, input::Input, prelude::{DisplayExt, GroupExt, InputExt, WidgetExt, WindowExt}, text::{self, TextEditor}, window::Window};
 use fltk_theme::{ThemeType, WidgetTheme};
 use regex::Regex;
-
 
 #[derive(Debug, Clone)]
 struct Execution {
@@ -45,16 +34,18 @@ impl Display for Execution {
 
 #[derive(Debug, Clone)]
 struct ReTest {
-    out: MultilineOutput,
+    out: TextEditor,
+    buff: text::TextBuffer,
     inp: Input,
     pat: Input,
     hist: Rc<RefCell<Vec<Execution>>>,
 }
 
 impl ReTest {
-    pub fn new(out: &MultilineOutput, inp: &Input, pat: &Input) -> Self {
+    pub fn new(out: &TextEditor, buff: &text::TextBuffer, inp: &Input, pat: &Input) -> Self {
         let r = ReTest {
             out: out.clone(),
+            buff: buff.clone(),
             inp: inp.clone(),
             pat: pat.clone(),
             hist: Rc::new(RefCell::new(Vec::new())),
@@ -70,11 +61,11 @@ impl ReTest {
                 s.push_str(&format!("{}: {}\n", i, x));
             }
         }
-        self.out.set_value(&s);
+        self.buff.set_text(&s);
     }
 
     pub fn matches(&mut self) {
-        self.out.set_value("");
+        self.buff.set_text("");
         let mut results = String::with_capacity(128);
         self.out.set_text_color(Color::Black);
         match Regex::new(&self.pat.value()) {
@@ -113,12 +104,12 @@ impl ReTest {
                 }
             }
         }
-        self.out.set_value(&results);
+        self.buff.set_text(&results);
         self.hist.borrow_mut().push(Execution::new("matches", &self.pat.value(), &self.inp.value(), ))
     }
     
     pub fn find(&mut self) {
-        self.out.set_value("");
+        // self.out.set_value("");
         self.out.set_text_color(Color::Black);
     
         let mut results = String::with_capacity(128);
@@ -151,12 +142,12 @@ impl ReTest {
                 }
             }
         }
-        self.out.set_value(&results);
-        self.hist.borrow_mut().push(Execution::new("find", &self.pat.value(), &self.inp.value(), ))
+        // self.out.set_value(&results);
+        // self.hist.borrow_mut().push(Execution::new("find", &self.pat.value(), &self.inp.value(), ))
     }
     
     pub fn split(&mut self) {
-        self.out.set_value("");
+        // self.out.set_value("");
         self.out.set_text_color(Color::Black);
         let mut results = String::with_capacity(128);
         let pattern = self.pat.value().clone();
@@ -183,8 +174,8 @@ impl ReTest {
                 }
             }
         }
-        self.out.set_value(&results);
-        self.hist.borrow_mut().push(Execution::new("split", &self.pat.value(), &self.inp.value(), ))
+        // self.out.set_value(&results);
+        // self.hist.borrow_mut().push(Execution::new("split", &self.pat.value(), &self.inp.value(), ))
     }
 }
 
@@ -199,7 +190,15 @@ fn main() {
     let mut wind = Window::default()
         .with_size(600, 400)
         .center_screen()
-        .with_label("Counter");
+        .with_label("Regular Expression Tester");
+
+    let icon_bytes = std::include_bytes!("../asset/icon3.png");
+    let im = match  PngImage::from_data(icon_bytes) {
+        Err(e) => {None},
+        Ok(i) => Some(i)
+    };
+    wind.set_icon(im);
+
     wind.size_range(600, 400, 0, 0);
 
     let mut main_group = Pack::new(0, 0, 600, 400, "");
@@ -262,7 +261,11 @@ fn main() {
 
     let f1 = Frame::default().with_size(0, 5);
 
-    let mut op = MultilineOutput::default().with_size(600, 300);
+    let mut buff = text::TextBuffer::default();
+    buff.set_tab_distance(4);
+    let mut op = TextEditor::default().with_size(600, 300);
+    op.set_buffer(buff.clone());
+    op.set_scrollbar_size(16);
     op.set_text_font(font);
     op.set_align(Align::Inside | Align::Left | Align::Top);
 
@@ -276,7 +279,7 @@ fn main() {
     wind.end();
     wind.show();
 
-    let r_ =  ReTest::new(&op, &str,&pat);
+    let r_ =  ReTest::new(&op, &buff, &str,&pat);
 
     let mut r =  r_.clone();
     matches_but.set_callback(move |b| r.matches());
