@@ -14,10 +14,24 @@ use std::{
 use anyhow::Context;
 use chrono::{DateTime, Local, Utc};
 use cpu_time::{ProcessTime, ThreadTime};
-use fltk::{app, button::Button, dialog, enums::{Align, Color, Font}, frame::Frame, group::{Pack, PackType}, image::PngImage, input::Input, prelude::{DisplayExt, GroupExt, InputExt, WidgetBase, WidgetExt, WindowExt}, text::{self, TextEditor}, window::Window};
+use fltk::{
+    app,
+    button::Button,
+    dialog,
+    enums::{Align, Color, Font},
+    frame::Frame,
+    group::{Pack, PackType},
+    image::PngImage,
+    input::Input,
+    prelude::{DisplayExt, GroupExt, InputExt, WidgetBase, WidgetExt, WindowExt},
+    text::{self, TextEditor},
+    window::Window,
+};
 use fltk_theme::{ThemeType, WidgetTheme};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+
+const DO_CPU_TIME: bool = false;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Execution {
@@ -173,8 +187,11 @@ impl ReTest {
     }
 
     pub fn update_cpu(&mut self) {
-        self.cpu_frame.set_label(&format!("{:?}", &self.cpu_time.elapsed()));
-        self.cpu_frame.redraw();
+        if DO_CPU_TIME {
+            self.cpu_frame
+                .set_label(&format!("{:?}", &self.cpu_time.elapsed()));
+            self.cpu_frame.redraw();
+        }
     }
 
     pub fn history(&mut self) {
@@ -384,7 +401,7 @@ fn main() {
     let mut find_but = Button::default().with_size(60, 25).with_label("&Find");
     let mut split_but = Button::default().with_size(60, 25).with_label("&Split");
     let mut hist_but = Button::default().with_size(60, 25).with_label("&History");
-    let mut cpu_frame = Frame::default().with_size(90,25).with_label("cpu time");
+    let mut cpu_frame = Frame::default().with_size(90, 25).with_label("");
 
     button_pack.end();
     button_pack.set_type(PackType::Horizontal);
@@ -440,11 +457,12 @@ fn main() {
     let mut r = r_.clone();
     hist_but.set_callback(move |b| r.history());
 
-
-    wind.handle(move|x,y| {
-        r_.update_cpu();
-        false
-    });
+    if DO_CPU_TIME {
+        wind.handle(move |x, y| {
+            r_.update_cpu();
+            false
+        });
+    }
 
     app.run().unwrap();
 }
