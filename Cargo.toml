@@ -17,6 +17,16 @@ path="src/fltk_re_tester.rs"
 name="re_test"
 package="re_test"
 
+[[bin]]
+path="src/nwg_re.rs"
+name="re"
+package="re_test"
+
+[[bin]]
+path="src/nwg_test.rs"
+name="nwg"  
+package="re_test"
+
 [dependencies]
 druid = { git = "https://github.com/linebender/druid", rev = "06b37f4" }
 fltk = {version = "1.1.7", features = ["fltk-bundled"] }
@@ -30,7 +40,8 @@ anyhow = "1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 lazy_static ="1.4.0"
-
+native-windows-gui = { git = "https://github.com/gabdube/native-windows-gui/", rev="9b9d641" }
+# native-windows-derive = { git = "https://github.com/gabdube/native-windows-gui/", rev ="0cd2ef8" }
 
 [build-dependencies]
 embed-resource = "1.6"
