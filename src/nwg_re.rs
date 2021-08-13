@@ -183,9 +183,9 @@ mod retester_app_ui {
     use super::*;
     use native_windows_gui as nwg;
     use nwg::stretch::style::AlignContent;
-    use nwg::{Font, TextBoxFlags, VTextAlign};
+    use nwg::{ButtonFlags, Font, ImageDecoder, TextBoxFlags, TextInputFlags, VTextAlign};
     use std::cell::RefCell;
-    use std::ops::Deref;
+    use std::ops::{BitAnd, BitXorAssign, Deref};
     use std::rc::Rc;
 
     pub struct FlexBoxAppUi {
@@ -197,9 +197,19 @@ mod retester_app_ui {
         fn build_ui(mut data: ReTesterApp) -> Result<FlexBoxAppUi, nwg::NwgError> {
             use nwg::Event as E;
 
+            let id = ImageDecoder::new()?;
+            let icon_bytes = std::include_bytes!("../asset/icon3.png");
+            // let im = match nwg::Icon::from_bin(icon_bytes) {
+            //     Err(e) => None,
+            //     Ok(i) => Some(i),
+            // };
+            // let im2 = Some(&im.unwrap());
+        
             Font::builder().family("Courier New").size_absolute(14).build(&mut data.font_io);
             // Controls
             nwg::Window::builder()
+                .icon(Some(&nwg::Icon::from_bin(icon_bytes).unwrap()))
+                .flags(nwg::WindowFlags::WINDOW | nwg::WindowFlags::VISIBLE | nwg::WindowFlags::MAIN_WINDOW | nwg::WindowFlags::RESIZABLE)
                 .size((500, 300))
                 .position((300, 300))
                 .title("Regular Expression Tester")
@@ -212,10 +222,12 @@ mod retester_app_ui {
                 .build(&mut data.pattern_lb)?;
 
             nwg::TextInput::builder()
-                .text("RE goes here")
+                // .text("RE goes here")
                 .parent(&data.window)
                 .font(Some(&data.font_io))
                 .focus(true)
+                // .flags(TextInputFlags::TAB_STOP|TextInputFlags::VISIBLE|TextInputFlags::)
+                .placeholder_text(Some("Regex goes here"))
                 .build(&mut data.pattern_inp)?;
 
             nwg::Label::builder()
@@ -225,40 +237,54 @@ mod retester_app_ui {
                 .build(&mut data.string_lb)?;
 
             nwg::TextInput::builder()
-                .text("Test String goes here")
+                // .text("Test String goes here")
                 .parent(&data.window)
                 .font(Some(&data.font_io))
-                .focus(true)
+                // .focus(true)
+                // .flags(TextInputFlags::TAB_STOP|TextInputFlags::VISIBLE)
+                .placeholder_text(Some("Test string goes here"))
                 .build(&mut data.string_inp)?;
+
 
             nwg::Button::builder()
                 .text("&Match")
+                .flags(ButtonFlags::VISIBLE)
                 .parent(&data.window)
                 .build(&mut data.match_bt)?;
 
             nwg::Button::builder()
                 .text("&Find")
+                .flags(ButtonFlags::VISIBLE)
                 .parent(&data.window)
                 .build(&mut data.find_bt)?;
 
             nwg::Button::builder()
                 .text("&Split")
+                .flags(ButtonFlags::VISIBLE)
                 .parent(&data.window)
                 .build(&mut data.split_bt)?;
 
             nwg::Button::builder()
                 .text("&History")
+                .flags(ButtonFlags::VISIBLE)
                 .parent(&data.window)
                 .build(&mut data.history_bt)?;
 
-                // use nwg::TextBoxFlags as TB;
+                // use winapi::um::winuser::{WS_DISABLED, BS_ICON, BS_BITMAP, BS_NOTIFY, WS_VISIBLE, WS_TABSTOP, WS_CHILD};
+
+            // for b in [data.match_bt, data.find_bt, data.split_bt].iter_mut() {
+            //     let mut bits = b.flags();
+            //     bits ^= WS_TABSTOP;
+            //     b.forced_flags();
+            // }
+
+
+                use nwg::TextBoxFlags as TB;
             nwg::TextBox::builder()
-                .text("Test String goes here")
-                //.flags()
                 .parent(&data.window)
                 .focus(true)
                 .font(Some(&data.font_io))
-                // .flags(TB::VISIBLE|TB::AUTOHSCROLL|TB::AUTOVSCROLL|TB::VSCROLL)
+                .flags(TB::VISIBLE|TB::AUTOHSCROLL|TB::AUTOVSCROLL|TB::VSCROLL)
                 .readonly(true)
                 .build(&mut data.output_tb)?;
 
@@ -305,6 +331,7 @@ mod retester_app_ui {
                 .flex_direction(FlexDirection::Row)
                 .padding(MIN_PAD)
                 .child(&ui.pattern_lb)
+                
                 .child_size(Size { width: LBL_WIDTH, height: HEIGHT_INP })
                 .child(&ui.pattern_inp)
                 .child_size(Size { width: D::Auto, height: HEIGHT_INP })
@@ -354,6 +381,8 @@ mod retester_app_ui {
                 .build(&ui.col_layout)?;
 
             ui.load_history();
+            ui.string_inp.set_focus();
+            ui.pattern_inp.set_focus();
 
             return Ok(ui);
         }
