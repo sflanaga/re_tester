@@ -34,7 +34,7 @@ use serde::{Deserialize, Serialize};
 const DO_CPU_TIME: bool = false;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct Execution {
+pub struct Execution {
     time: chrono::DateTime<Local>,
     operation: String,
     pattern: String,
@@ -69,8 +69,14 @@ impl Display for Execution {
 }
 
 #[derive(Debug, Clone)]
-struct History {
+pub struct History {
     hist: Rc<RefCell<Vec<Execution>>>,
+}
+
+impl Default for History {
+    fn default() -> Self {
+        History::new()
+    }
 }
 
 impl History {
